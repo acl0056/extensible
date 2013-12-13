@@ -68,4 +68,8 @@ n._private; // => undefined
 // Should all be true 
 p instanceof Person && p instanceof Class &&
 n instanceof Ninja && n instanceof Person && n instanceof Class
+
+p = p.release(); // => null
+n = n.release(); // => null
+anotherNinja = anotherNinja.release(); // => null
 ```
