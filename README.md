@@ -10,7 +10,7 @@ Extensible gives you:
 + Private instance varibales
 + A very simple property API
  
-The property API provides all of the flexibility of Object.defineProperty, but it is simplified to allow you to only pass in a single function as a setter and a getter.
+The property API provides all of the flexibility of Object.defineProperty, but it is simplified to allow you to only pass in a single function as a setter and a getter.  The property setter and getter methods have access to the same private variables and superclass methods as all other instance methods.  In fact, private variables are most useful for property setters and getters, where you need your something to happen whenever a property is set so you cannot allow it to be set directly.  This allows you to enforce that your code is not used incorrectly by other people, because people are stupid.  I should mention that because people are stupid, when you use property setters and getters you have the potential to easily confuse them.
 
 Example usage:
 ```
@@ -28,6 +28,15 @@ var Person = Class.extend({
   },
   people: function() {
     return this._privateStatic.instances;
+  },
+  things: new Property(function(numberOfThings) {
+    if (numberOfThings === undefined)
+      return this._private.numberOfThings;
+    this._private.numberOfThings = parseInt(numberOfThings);
+    this._private.numberOFCalls = (this._private.numberOFCalls || 0) + 1;
+  }),
+  numberOfCallsToThings: function() {
+    return this._private.numberOFCalls;
   }
 });
  
@@ -52,8 +61,9 @@ var Ninja = Person.extend({
   },
   things: new Property(function(numberOfThings) {
     if (numberOfThings === undefined)
-      return this._private.numberOfThings;
+      return this._private.numberOfThings + this._super();
     this._private.numberOfThings = parseInt(numberOfThings);
+    this._super(numberOfThings);
   })
 });
  
@@ -79,8 +89,9 @@ ninja instanceof Ninja && ninja instanceof Person && ninja instanceof Class
 
 // Property API
 ninja.things = "2";
-ninja.things === "2" // => false
-ninja.things === 2 // => true
+ninja.things === "2"; // => false
+ninja.things === 4; // => true
+ninja.numberOfCallsToThings(); // => 1
 
 // Clear the private variable storage for the objects.
 person = person.release(); // => null
