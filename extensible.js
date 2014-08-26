@@ -1,6 +1,6 @@
 (function(context) {
 	function isBoolean(obj) {
-		return obj === true || obj === false || toString.call(obj) == '[object Boolean]';
+		return obj === true || obj === false || Object.prototype.toString.call(obj) == '[object Boolean]';
 	}
 	
 	var Property = function() {
