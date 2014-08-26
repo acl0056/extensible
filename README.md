@@ -12,12 +12,12 @@ Extensible gives you:
 Example usage:
 ```
 var Person = Class.extend({
-  init: function(isDancing){
+  init: function(isDancing) {
     this.dancing = isDancing;
     this._private.isSneaky = false;
     this._privateStatic.instances = (this._privateStatic.instances || 0) + 1;
   },
-  dance: function(){
+  dance: function() {
     return this.dancing;
   },
   sneak: function() {
@@ -29,12 +29,12 @@ var Person = Class.extend({
 });
  
 var Ninja = Person.extend({
-  init: function(){
+  init: function() {
     this._super( false );
     this._private.isSneaky = true;
     this._privateStatic.instances = (this._privateStatic.instances || 0) + 1;
   },
-  dance: function(){
+  dance: function() {
     // Call the inherited version of dance()
     return this._super();
   },
@@ -44,32 +44,33 @@ var Ninja = Person.extend({
   ninjas: function() {
     return this._privateStatic.instances;
   },
-  swingSword: function(){
+  swingSword: function() {
     return true;
   }
 });
  
-var p = Person.make(true);
-p.dance(); // => true
-p.sneak(); // => false
+var person = new Person(true);
+person.dance(); // => true
+person.sneak(); // => false
  
-var n = Ninja.make();
-n.dance(); // => false
-n.swingSword(); // => true
-n.sneak(); // => true
+var ninja = new Ninja();
+ninja.dance(); // => false
+ninja.swingSword(); // => true
+ninja.sneak(); // => true
 
-var anotherNinja = Ninja.make();
-p.people(); // => 1
-n.ninjas(); // => 2
+var anotherNinja = new Ninja();
+person.people(); // => 1
+ninja.ninjas(); // => 2
 
-p._privateStatic; // => undefined
-n._private; // => undefined
+person._privateStatic; // => undefined
+ninja._private; // => undefined
  
 // Should all be true 
-p instanceof Person && p instanceof Class &&
-n instanceof Ninja && n instanceof Person && n instanceof Class
+person instanceof Person && person instanceof Class &&
+ninja instanceof Ninja && ninja instanceof Person && ninja instanceof Class
 
-p = p.release(); // => null
-n = n.release(); // => null
+// Clear the private variable storage for the objects.
+person = person.release(); // => null
+ninja = ninja.release(); // => null
 anotherNinja = anotherNinja.release(); // => null
 ```
