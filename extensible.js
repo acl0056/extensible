@@ -1,5 +1,29 @@
 (function(context) {
 	
+	var Property = function() {
+		var args = _.values(arguments);
+		var functionOrValue = args.shift(), configurable, enumerable;
+		if (_.isFunction(functionOrValue)) {
+			// accessor descriptor arguments are (get [, set, configurable, enumerable])
+			this.type = "accessor";
+			this.get = functionOrValue;
+			this.set = _.isFunction(arguments[1]) ? args.shift() : functionOrValue; // Allow getter and setter to be the same function.
+		}
+		else {
+			// data descriptor arguments are (value [, writable, configurable, enumerable])
+			this.type = "data";
+			this.value = functionOrValue;
+			if (_.isBoolean(arguments[3])) {
+				this.writable = args.shift();
+			}
+		}
+		if ((configurable=args.shift()) !== undefined)
+			this.configurable = configurable;
+		if ((enumerable=args.shift()) !== undefined)
+			this.enumerable = enumerable;
+	};
+	context.Property = Property;
+	
 	// This polyfill is based on https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/create
 	var objectCreate = Object.create || (function () {
 		function F() {};
