@@ -8,7 +8,10 @@ Extensible gives you:
 + Simulated classical inheritance
 + Private static variables
 + Private instance varibales
++ A very simple property API
  
+The property API provides all of the flexibility of Object.defineProperty, but it is simplified to allow you to only pass in a single function as a setter and a getter.
+
 Example usage:
 ```
 var Person = Class.extend({
@@ -46,7 +49,12 @@ var Ninja = Person.extend({
   },
   swingSword: function() {
     return true;
-  }
+  },
+  things: new Property(function(numberOfThings) {
+    if (numberOfThings === undefined)
+      return this._private.numberOfThings;
+    this._private.numberOfThings = parseInt(numberOfThings);
+  })
 });
  
 var person = new Person(true);
@@ -64,10 +72,15 @@ ninja.ninjas(); // => 2
 
 person._privateStatic; // => undefined
 ninja._private; // => undefined
- 
+
 // Should all be true 
 person instanceof Person && person instanceof Class &&
 ninja instanceof Ninja && ninja instanceof Person && ninja instanceof Class
+
+// Property API
+ninja.things = "2";
+ninja.things === "2" // => false
+ninja.things === 2 // => true
 
 // Clear the private variable storage for the objects.
 person = person.release(); // => null
