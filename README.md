@@ -33,10 +33,10 @@ var Person = Class.extend({
     if (numberOfThings === undefined)
       return this._private.numberOfThings;
     this._private.numberOfThings = parseInt(numberOfThings);
-    this._private.numberOFCalls = (this._private.numberOFCalls || 0) + 1;
+    this._private.numberOfCalls = (this._private.numberOfCalls || 0) + 1;
   }),
   numberOfCallsToThings: function() {
-    return this._private.numberOFCalls;
+    return this._private.numberOfCalls;
   }
 });
  
@@ -61,7 +61,7 @@ var Ninja = Person.extend({
   },
   things: new Property(function(numberOfThings) {
     if (numberOfThings === undefined)
-      return this._private.numberOfThings + this._super();
+      return this._private.numberOfThings;
     this._private.numberOfThings = parseInt(numberOfThings);
     this._super(numberOfThings);
   })
@@ -90,7 +90,7 @@ ninja instanceof Ninja && ninja instanceof Person && ninja instanceof Class
 // Property API
 ninja.things = "2";
 ninja.things === "2"; // => false
-ninja.things === 4; // => true
+ninja.things === 2; // => true
 ninja.numberOfCallsToThings(); // => 1
 
 // Clear the private variable storage for the objects.
