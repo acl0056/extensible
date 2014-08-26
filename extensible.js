@@ -84,7 +84,7 @@
 			_private[key] = {};
 			
 			// There is no acceptable polyfill for defineProperty, however in this case this workaround is okay.
-			if (_.isFunction(Object.defineProperty))
+			if (typeof Object.defineProperty === "function")
 				Object.defineProperty(this, "__private_instance_key__", { writable: false, configurable:false, value: key });
 			else
 				this.__private_instance_key__ = key;
@@ -101,7 +101,7 @@
 			}
 			else {
 				// Check if we're overwriting an existing function
-				prototype[name] = (_.isFunction(property)) ? (function(name, fn) {
+				prototype[name] = (typpeof property === "function") ? (function(name, fn) {
 					// Check if we need to bind _super, _privateStatic or _private.
 					var has = (typeof _super[name] == "function" && referencesSuper.test(property) ? Has.Super : 0)
 								| (referencesPrivateStatic.test(property) ? Has.Static : 0)
@@ -200,18 +200,15 @@
 		// All construction is actually done in the init method
 		var SubClass;
 		if (hasPropertyDefinitions) {
-			if (!_.isFunction(Object.defineProperty))
+			if (typeof Object.defineProperty !== "function")
 				throw new Error("This browser is too old for Object.defineProperty.");
 			
 			SubClass = function() {
-				_.each(propertyDefinitions, function(definition, name) {
-					
-						return Object.defineProperty(this, name, definition);
-					if (definition.type === "accessor")
-						
-					else
-						this[name] = definition.value;
-				});
+				for (var key in propertyDefinitions) {
+					if (propertyDefinitions.hasOwnProperty(key)) {
+						Object.defineProperty(this, key, propertyDefinitions[key]);
+					}
+				}
 				if (_.isFunction(prototype.init)) {
 					prototype.init.apply(this);
 				}
