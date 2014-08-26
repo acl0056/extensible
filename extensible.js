@@ -13,19 +13,18 @@
 		var functionOrValue = args.shift(), configurable, enumerable;
 		if (typeof functionOrValue === "function") {
 			// accessor descriptor arguments are (get [, set, configurable, enumerable])
-			this.type = "accessor";
+			Object.defineProperty(this, "type", {value:"accessor", enumerable: true});
 			this.get = functionOrValue;
 			this.set = typeof arguments[1] === "function"? args.shift() : functionOrValue; // Allow getter and setter to be the same function.
 		}
 		else {
 			// data descriptor arguments are (value [, writable, configurable, enumerable])
-			this.type = "data";
+			Object.defineProperty(this, "type", {value:"data", enumerable: true});
 			this.value = functionOrValue;
 			if (isBoolean(arguments[3])) {
 				this.writable = args.shift();
 			}
 		}
-		this.enumerable = true; // Default to true because the base class implementation enumerates properties.
 		if ((configurable=args.shift()) !== undefined)
 			this.configurable = configurable;
 		if ((enumerable=args.shift()) !== undefined)
