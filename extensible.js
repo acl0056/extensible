@@ -1,22 +1,31 @@
 (function(context) {
+	function isBoolean(obj) {
+		return obj === true || obj === false || toString.call(obj) == '[object Boolean]';
+	}
 	
 	var Property = function() {
-		var args = _.values(arguments);
+		var args = [];
+		for (var key in arguments) {
+			if (arguments.hasOwnProperty(key) && isFinite(key)) {
+				args[key] = arguments[key];
+			}
+		}
 		var functionOrValue = args.shift(), configurable, enumerable;
-		if (_.isFunction(functionOrValue)) {
+		if (typeof functionOrValue === "function") {
 			// accessor descriptor arguments are (get [, set, configurable, enumerable])
 			this.type = "accessor";
 			this.get = functionOrValue;
-			this.set = _.isFunction(arguments[1]) ? args.shift() : functionOrValue; // Allow getter and setter to be the same function.
+			this.set = typeof arguments[1] === "function"? args.shift() : functionOrValue; // Allow getter and setter to be the same function.
 		}
 		else {
 			// data descriptor arguments are (value [, writable, configurable, enumerable])
 			this.type = "data";
 			this.value = functionOrValue;
-			if (_.isBoolean(arguments[3])) {
+			if (isBoolean(arguments[3])) {
 				this.writable = args.shift();
 			}
 		}
+		this.enumerable = true; // Default to true because the base class implementation enumerates properties.
 		if ((configurable=args.shift()) !== undefined)
 			this.configurable = configurable;
 		if ((enumerable=args.shift()) !== undefined)
@@ -25,7 +34,7 @@
 	context.Property = Property;
 	
 	// This polyfill is based on https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/create
-	var objectCreate = Object.create || (function () {
+	Object.create = Object.create || (function() {
 		function F() {};
 		return function (o) {
 			if (arguments.length > 1) { 
@@ -57,7 +66,7 @@
 	// Create a new Class that inherits from this class
 	Class.extend = function(properties) {
 		var _private = {}, _privateStatic, _super = this.prototype, _superRelease = _super.release, propertyDefinitions = {}, hasPropertyDefinitions = false;
-		
+		var superPropertyDefinitions = this.propertyDefinitions || {};
 		// Allow normal this._super() call in subclass release() definition, while still allowing release method for private variables within this scope.
 		// In other words there are potentially two levels of the release method just in a single class definition.
 		_super.release = function() {
@@ -89,6 +98,99 @@
 			else
 				this.__private_instance_key__ = key;
 		}
+
+		function prepareMethod(name, fn, method) {
+			// Check if we need to bind _super, _privateStatic or _private.
+			var has = ((typeof _super[name] == "function" || superPropertyDefinitions[name]) && referencesSuper.test(fn) ? Has.Super : 0)
+						| (referencesPrivateStatic.test(fn) ? Has.Static : 0)
+						| (referencesPrivate.test(fn) ? Has.Private : 0);
+			if (has & Has.Static && !_privateStatic)
+				_privateStatic = {};
+			// For efficiency, we only temporarilly bind objects that are needed by the function.
+			// These objects are bound to the instance temporarily while the function defined in properties executes.
+			switch (has) {
+				case 0: // Has.None 0000
+					return fn;
+					break;
+				case 1: // Has.Super 001
+					return function() {
+						var tmp = this._super;
+						this._super = _super[name] || superPropertyDefinitions[name][method];
+						var returnValue = fn.apply(this, arguments);
+						this._super = tmp;
+						return returnValue;
+					};
+				case 2: // Has.Static 0010
+					return function() {
+						var privateStaticTmp = this._privateStatic;
+						this._privateStatic = _privateStatic;
+						var returnValue = fn.apply(this, arguments);
+						this._privateStatic = privateStaticTmp;
+						return returnValue;
+					};
+				case 4: // Has.Private = 0100
+					return function() {
+						var privateTmp = this._private;
+						if (!this.__private_instance_key__)
+							_getPrivateInstanceKey.call(this);
+						this._private = _private[this.__private_instance_key__] || (_private[this.__private_instance_key__] = {});
+						var returnValue = fn.apply(this, arguments);
+						this._private = privateTmp;
+						return returnValue;
+					};
+				case 3: // Has.Super | Has.Static = 0011
+					return function() {
+						var tmp = this._super, privateStaticTmp = this._privateStatic;
+						this._super = _super[name] || superPropertyDefinitions[name][method];
+						this._privateStatic = _privateStatic;
+						var returnValue = fn.apply(this, arguments);
+						this._super = tmp;
+						this._privateStatic = privateStaticTmp;
+						return returnValue;
+					};
+				case 5: // Has.Super | Has.Private = 0101
+					return function() {
+						var tmp = this._super;
+						var privateTmp = this._private;
+						if (!this.__private_instance_key__)
+							_getPrivateInstanceKey.call(this);
+						this._private = _private[this.__private_instance_key__] || (_private[this.__private_instance_key__] = {});
+						this._super = _super[name] || superPropertyDefinitions[name][method];
+						var returnValue = fn.apply(this, arguments);
+						this._super = tmp;
+						this._private = privateTmp;
+						return returnValue;
+					};
+				case 6: // Has.Static | Has.Private = 0110
+					return function() {
+						var privateStaticTmp = this._privateStatic;
+						var privateTmp = this._private;
+						if (!this.__private_instance_key__)
+							_getPrivateInstanceKey.call(this);
+						this._private = _private[this.__private_instance_key__] || (_private[this.__private_instance_key__] = {});
+						this._privateStatic = _privateStatic;
+						var returnValue = fn.apply(this, arguments);
+						this._privateStatic = privateStaticTmp;
+						this._private = privateTmp;
+						return returnValue;
+					};
+				case 7: // Has.Super | Has.Static | Has.Private = 0111
+					return function() {
+						var tmp = this._super, privateStaticTmp = this._privateStatic;
+						var privateTmp = this._private;
+						if (!this.__private_instance_key__)
+							_getPrivateInstanceKey.call(this);
+						this._private = _private[this.__private_instance_key__];
+						this._super = _super[name] || superPropertyDefinitions[name][method];
+						this._privateStatic = _privateStatic;
+						var returnValue = fn.apply(this, arguments);
+						this._super = tmp;
+						this._privateStatic = privateStaticTmp;
+						this._private = privateTmp;
+						return returnValue;
+					};
+			}
+		}
 		
 		// Copy the properties over onto the new prototype
 		for (var name in properties) {
@@ -97,102 +199,15 @@
 			// Check for property definition instance
 			if (property instanceof Property) {
 				hasPropertyDefinitions = true;
+				if (property.type === "accessor") {
+					property.get = prepareMethod(name, property.get, "get");
+					property.set = prepareMethod(name, property.set, "set");
+				}
 				propertyDefinitions[name] = property;
 			}
 			else {
 				// Check if we're overwriting an existing function
-				prototype[name] = (typpeof property === "function") ? (function(name, fn) {
-					// Check if we need to bind _super, _privateStatic or _private.
-					var has = (typeof _super[name] == "function" && referencesSuper.test(property) ? Has.Super : 0)
-								| (referencesPrivateStatic.test(property) ? Has.Static : 0)
-								| (referencesPrivate.test(property) ? Has.Private : 0);
-					if (has & Has.Static && !_privateStatic)
-						_privateStatic = {};
-					// For efficiency, we only temporarilly bind objects that are needed by the function.
-					// These objects are bound to the instance temporarily while the function defined in properties executes.
-					switch (has) {
-						case 0: // Has.None 0000
-							return properties[name];
-							break;
-						case 1: // Has.Super 001						
-							return function() {
-								var tmp = this._super;
-								this._super = _super[name];
-								var returnValue = fn.apply(this, arguments);        
-								this._super = tmp;
-								return returnValue;
-							};
-						case 2: // Has.Static 0010
-							return function() {
-								var privateStaticTmp = this._privateStatic;
-								this._privateStatic = _privateStatic;
-								var returnValue = fn.apply(this, arguments);
-								this._privateStatic = privateStaticTmp;
-								return returnValue;
-							};
-						case 4: // Has.Private = 0100
-							return function() {
-								var privateTmp = this._private;
-								if (!this.__private_instance_key__)
-									_getPrivateInstanceKey.call(this);
-								this._private = _private[this.__private_instance_key__];
-								var returnValue = fn.apply(this, arguments);
-								this._private = privateTmp;
-								return returnValue;
-							};
-						case 3: // Has.Super | Has.Static = 0011
-							return function() {
-								var tmp = this._super, privateStaticTmp = this._privateStatic;
-								this._super = _super[name];
-								this._privateStatic = _privateStatic;
-								var returnValue = fn.apply(this, arguments);        
-								this._super = tmp;
-								this._privateStatic = privateStaticTmp;
-								return returnValue;
-							};
-						case 5: // Has.Super | Has.Private = 0101
-							return function() {
-								var tmp = this._super;
-								var privateTmp = this._private;
-								if (!this.__private_instance_key__)
-									_getPrivateInstanceKey.call(this);
-								this._private = _private[this.__private_instance_key__];
-								this._super = _super[name];
-								var returnValue = fn.apply(this, arguments);        
-								this._super = tmp;
-								this._private = privateTmp;
-								return returnValue;
-							};
-						case 6: // Has.Static | Has.Private = 0110
-							return function() {
-								var privateStaticTmp = this._privateStatic;
-								var privateTmp = this._private;
-								if (!this.__private_instance_key__)
-									_getPrivateInstanceKey.call(this);
-								this._private = _private[this.__private_instance_key__];
-								this._privateStatic = _privateStatic;
-								var returnValue = fn.apply(this, arguments);
-								this._privateStatic = privateStaticTmp;
-								this._private = privateTmp;
-								return returnValue;
-							};
-						case 7: // Has.Super | Has.Static | Has.Private = 0111
-							return function() {
-								var tmp = this._super, privateStaticTmp = this._privateStatic;
-								var privateTmp = this._private;
-								if (!this.__private_instance_key__)
-									_getPrivateInstanceKey.call(this);
-								this._private = _private[this.__private_instance_key__];
-								this._super = _super[name];
-								this._privateStatic = _privateStatic;
-								var returnValue = fn.apply(this, arguments);        
-								this._super = tmp;
-								this._privateStatic = privateStaticTmp;
-								this._private = privateTmp;
-								return returnValue;
-							};
-					}
-				})(name, properties[name]) : properties[name];
+				prototype[name] = (typeof property === "function") ? prepareMethod(name, property) : property;
 			}
 		}
 		
@@ -204,18 +219,19 @@
 				throw new Error("This browser is too old for Object.defineProperty.");
 			
 			SubClass = function() {
-				for (var key in propertyDefinitions) {
-					if (propertyDefinitions.hasOwnProperty(key)) {
-						Object.defineProperty(this, key, propertyDefinitions[key]);
+				for (var name in propertyDefinitions) {
+					if (propertyDefinitions.hasOwnProperty(name)) {
+						Object.defineProperty(this, name, propertyDefinitions[name]);
 					}
 				}
-				if (_.isFunction(prototype.init)) {
-					prototype.init.apply(this);
+				if (typeof prototype.init === "function") {
+					prototype.init.apply(this, arguments);
 				}
 			};
+			SubClass.propertyDefinitions = propertyDefinitions;
 		}
 		else
-			SubClass = _.isFunction(prototype.init) ? prototype.init : function(){};
+			SubClass = typeof prototype.init === "function" ? prototype.init : function(){};
 		
 		// Populate our constructed prototype object
 		SubClass.prototype = prototype;
