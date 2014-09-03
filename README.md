@@ -10,7 +10,7 @@ Extensible gives you:
 + Private instance varibales
 + A very simple property API
  
-The property API provides all of the flexibility of Object.defineProperty, but it is simplified to allow you to only pass in a single function as a setter and a getter.  The property setter and getter methods have access to the same private variables and superclass methods as all other instance methods.  In fact, private variables are most useful for property setters and getters, where you need something to happen whenever a property is set so you cannot allow it to be set directly.  This allows you to enforce that your code is not used incorrectly by other people, because people are stupid and aweful.  I should mention that because people are stupid, when you use property setters and getters you have the potential to easily confuse them.  Do not use setters and getters that have unpredictacble side-effecs. If you do you will be joining the ranks of the people that can't understand how to do anything.
+The property API provides all of the flexibility of Object.defineProperty, but it is simplified to allow you to only pass in a single function as a setter and a getter.  The property setter and getter methods have access to the same private variables and superclass methods as all other instance methods.  In fact, private variables are most useful for property setters and getters, where you need something to happen whenever a property is set so you cannot allow it to be set directly.  This allows you to enforce that your code is not used incorrectly by other people.
 
 Example usage:
 ```
